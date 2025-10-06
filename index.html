@@ -364,5 +364,27 @@ modeBtn.addEventListener('click', () => {
 
 renderAll();
 </script>
+  <script>
+(function () {
+  function postHeight(){
+    var h = document.documentElement.scrollHeight;
+    // You can lock to your Squarespace domain instead of '*'
+    // parent.postMessage({ fixturesHeight: h }, 'https://YOUR-DOMAIN.squarespace.com');
+    parent.postMessage({ fixturesHeight: h }, '*');
+  }
+
+  // Update on load/resize and when content changes
+  window.addEventListener('load', postHeight);
+  window.addEventListener('resize', postHeight);
+
+  // Watch for DOM size changes (more reliable than setInterval alone)
+  if (window.ResizeObserver) {
+    new ResizeObserver(postHeight).observe(document.documentElement);
+  }
+
+  // Fallback: ping occasionally
+  setInterval(postHeight, 1000);
+})();
+</script>
 </body>
 </html>
