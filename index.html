@@ -42,9 +42,32 @@
   [data-theme="dark"] .mode-btn { background:#242526; color:#fff; }
   .filters { display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:10px; }
   select { width:100%; padding:12px 10px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:16px; }
-  .tabs { display:flex; gap:8px; margin:10px 0 0; }
-  .tab-btn { flex:1; padding:10px; border-radius:10px; border:1px solid var(--border); background:var(--bg); font-weight:500; cursor:pointer; }
-  .tab-btn.active { background: var(--brand); color:#fff; border-color: var(--brand); }
+.tabs { display:flex; gap:8px; margin:10px 0 0; }
+
+/* Inactive tab text color */
+.tab-btn{
+  flex:1;
+  padding:10px;
+  border-radius:10px;
+  border:1px solid var(--border);
+  background:var(--bg);
+  font-weight:500;
+  cursor:pointer;
+  color: var(--text);              /* ← ensures readable in dark mode */
+}
+
+/* Selected tab */
+.tab-btn.active{
+  background: var(--brand);
+  color:#fff;
+  border-color: var(--brand);
+}
+
+/* Extra help for dark mode */
+[data-theme="dark"] .tab-btn{
+  background:#1f2022;             /* subtle dark surface */
+  color: var(--text);              /* light text */
+}
   main { padding: 12px; }
   .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 12px; margin: 10px 0; }
   .row-top { display:flex; justify-content:space-between; align-items:center; gap:8px; }
