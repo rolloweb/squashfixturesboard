@@ -67,7 +67,14 @@ header { position: sticky; top: 0; z-index: 10; background: var(--bg); padding: 
   .actions { display:flex; gap:8px; margin-top:10px; flex-wrap: wrap; }
   .btn { background: var(--brand); color:#000; border:none; padding:10px 12px; border-radius: 10px; font-weight:500; font-size:14px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; flex:1 1 48%; min-width:0; }
   .btn.secondary { background: transparent; color:var(--text); border:1px solid var(--border); }
-
+/* MOBILE HEADER PADDING */
+@media (max-width: 480px) {
+  header {
+    /* more space on small screens + iPhone notch safety */
+    padding: 20px 18px;
+    padding-top: calc(20px + env(safe-area-inset-top));
+  }
+} 
   /* Calendar (stacked) */
   .month-block { margin: 14px 0; }
   .month-title { font-weight:600; margin: 6px 2px 8px; text-transform:uppercase; letter-spacing:.04em; }
