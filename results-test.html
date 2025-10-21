@@ -1,246 +1,452 @@
-<!-- BEGIN MAIN APP SCRIPT -->
-<script>
-/* ========= Data comes from your page ========= */
-const DATA = window.DATA;          // keep existing DATA array defined earlier in your file
-const RESULTS = window.RESULTS;    // keep existing RESULTS array defined earlier in your file
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>Peterborough Squash & Racketball Club — Fixtures & Results 2025–26</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;800;900&display=swap" rel="stylesheet">
 
-/* ========= Helpers ========= */
-function parseDate(textDate, time) {
-  const m = textDate.match(/(\d{1,2})\s(\w{3})\s(\d{4})/);
-  if (!m) return null;
-  const [_, d, mon, y] = m;
-  const months = {Jan:0, Feb:1, Mar:2, Apr:3, May:4, Jun:5, Jul:6, Aug:7, Sep:8, Oct:9, Nov:10, Dec:11};
-  const t = time && time.match(/(\d{1,2}):(\d{2})(am|pm)/i);
-  let hh = 19, mm = 0;
-  if (t) {
-    hh = +t[1]; mm = +t[2];
-    const ap = t[3].toLowerCase();
-    if (ap === 'pm' && hh < 12) hh += 12;
-    if (ap === 'am' && hh === 12) hh = 0;
-  }
-  return new Date(+y, months[mon], +d, hh, mm);
-}
-function monthKey(dt){ return dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0'); }
-function divisionClass(div){ return div.toLowerCase().replace(' ', ''); }
-function isAllDivisions(val){ return !val || String(val).toLowerCase().startsWith('all'); }
-function mapsLink(place){ if (!place || place === '-' || String(place).toLowerCase() === 'bye') return '#'; return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(place); }
-const pad = n => String(n).padStart(2,'0');
-function fmtLocal(d){ return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'T'+pad(d.getHours())+pad(d.getMinutes())+'00'; }
-function googleCalLink(ev){
-  const start = ev.dt, end = new Date(start.getTime()+90*60000);
-  const q = new URLSearchParams({
-    action:'TEMPLATE',
-    text: `PTSRC vs ${ev.opponent} (${ev.home ? 'Home':'Away'})`,
-    details:'League fixture – check league site for any updates.',
-    location: ev.location,
-    dates: `${fmtLocal(start)}/${fmtLocal(end)}`
-  });
-  return 'https://calendar.google.com/calendar/render?' + q.toString();
-}
-function makeICS(ev){
-  const start = ev.dt, end = new Date(start.getTime()+90*60000);
-  const ics = [
-    'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//PTSRC//Fixtures//EN','BEGIN:VEVENT',
-    `UID:${Date.now()}-${Math.random().toString(36).slice(2)}@ptsquash`,
-    `DTSTAMP:${fmtLocal(new Date())}`,
-    `DTSTART:${fmtLocal(start)}`,
-    `DTEND:${fmtLocal(end)}`,
-    `SUMMARY:PTSRC vs ${ev.opponent} (${ev.home?'Home':'Away'})`,
-    `LOCATION:${ev.location.replace(/,/g,'\\,')}`,
-    'DESCRIPTION:League fixture – check league site for updates.','END:VEVENT','END:VCALENDAR'
-  ].join('\r\n');
-  return URL.createObjectURL(new Blob([ics], {type:'text/calendar'}));
-}
-
-/* ========= Build a fast result index: Div|YYYY-MM-DD|location ========= */
-const RESULT_INDEX = (() => {
-  const m = new Map();
-  (RESULTS || []).forEach(r => {
-    m.set(`${r.division}|${r.date_iso}|${String(r.location).toLowerCase()}`, r);
-  });
-  return m;
-})();
-
-function findResultFor(ev){
-  const iso = ev.dt.toISOString().slice(0,10);
-  const keyLoc = `${ev.division}|${iso}|${ev.location.toLowerCase()}`;
-  const keyOpp = `${ev.division}|${iso}|${(ev.opponent.split(' ')[0]||'').toLowerCase()}`;
-  return RESULT_INDEX.get(keyLoc) || RESULT_INDEX.get(keyOpp) || null;
-}
-
-/* ========= LIST VIEW ========= */
-function renderList(){
-  const divSel   = document.getElementById('division').value;
-  const sportSel = document.getElementById('sport').value;
-  const list = document.getElementById('list');
-  list.innerHTML = '';
-  let count = 0;
-
-  DATA.map(r => ({...r, dt: parseDate(r.date, r.time), monthKey:null})).forEach(ev => {
-    if (!ev.dt) return;
-    ev.monthKey = monthKey(ev.dt);
-    if (!isAllDivisions(divSel) && ev.division !== divSel) return;
-    if (sportSel && ev.sport !== sportSel) return;
-
-    const card = document.createElement('div');
-    const divCls = divisionClass(ev.division);
-    card.className = 'card side-stripe ' + divCls;
-    card.style.borderLeftColor = getComputedStyle(document.documentElement).getPropertyValue('--' + divCls);
-
-    const home = ev.homeAway.toLowerCase() === 'home';
-    const maps = mapsLink(ev.location);
-    const gcal = googleCalLink({...ev, home});
-    const ics  = makeICS({...ev, home});
-
-    // show "See results" when available
-    const res = findResultFor(ev);
-    let actionsHtml = '';
-    if (res) {
-      const payload = JSON.stringify({ division: ev.division, date: ev.date, time: ev.time, opponent: ev.opponent });
-      actionsHtml = `<a class="btn" href="#" onclick='openResult(${payload}); return false;'>See results</a>`;
-    } else {
-      actionsHtml = `
-        <a class="btn" href="${gcal}" target="_blank" rel="noopener">Add to Google</a>
-        <a class="btn secondary" href="${ics}" download="PTSRC_${ev.division.replace(' ','')}_${ev.opponent.replace(/\s+/g,'')}_${ev.monthKey}.ics">Download .ics</a>
-      `;
+  <style>
+    :root{
+      --brand:#fa6600;
+      --bg:#ffffff;
+      --card:#ffffff;
+      --text:#0f0f10;
+      --muted:#545454;
+      --border:#e5e5e5;
+      --home:#16a34a;
+      --away:#d97706;
+      --div1:#fa6600;
+      --div2:#2563eb;
+      --div3:#9333ea;
+    }
+    [data-theme="dark"]{
+      --bg:#0f0f10;
+      --card:#151618;
+      --text:#f6f6f6;
+      --muted:#b9b9b9;
+      --border:#2b2c2d;
     }
 
-    const homePill = `<span class="${home ? 'home-pill' : 'away-pill'}">${home ? 'HOME' : 'AWAY'}</span>`;
-    const divBadge = `<span class="division-badge ${divCls}">${ev.division}</span>`;
+    *{box-sizing:border-box}
+    html,body{max-width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%}
+    body{margin:0;font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;background:var(--bg);color:var(--text)}
 
-    card.innerHTML = `
-      <div class="row-top">
-        <div class="date">${ev.date} • ${ev.time}</div>
-        ${divBadge}
+    header{position:sticky;top:0;z-index:10;background:var(--bg);padding:20px 18px;border-bottom:1px solid var(--border)}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .brand img{width:64px;height:auto;object-fit:contain;filter:drop-shadow(0 2px 2px rgba(0,0,0,.12))}
+    .brand h1{font-size:20px;margin:0;line-height:1.1;font-weight:800}
+    .brand small{display:block;color:var(--muted);font-weight:500;letter-spacing:.2px}
+    .official{color:var(--brand);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+
+    .mode-btn{background:#f2f2f2;border:1px solid var(--border);color:#000;padding:10px 12px;border-radius:10px;font-weight:500;cursor:pointer}
+    [data-theme="dark"] .mode-btn{background:#242526;color:#fff}
+
+    .filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+    select{width:100%;padding:12px 10px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:16px}
+
+    .tabs{display:flex;gap:8px;margin:10px 0 0}
+    .tab-btn{flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--bg);font-weight:500;cursor:pointer;color:var(--text)}
+    .tab-btn.active{background:var(--brand);color:#fff;border-color:var(--brand)}
+    [data-theme="dark"] .tab-btn{background:#1f2022;color:var(--text)}
+
+    main{padding:12px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px;margin:10px 0}
+    .row-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+    .date{font-weight:800;font-size:15px}
+    .division-badge{font-size:12px;padding:3px 10px;border-radius:999px;text-transform:uppercase;font-weight:900;letter-spacing:.04em;background:transparent;border:2px solid currentColor}
+    .division-badge.div1{color:var(--div1)} .division-badge.div2{color:var(--div2)} .division-badge.div3{color:var(--div3)}
+    .side-stripe{border-left:4px solid transparent;padding-left:10px}
+    .div1.side-stripe{border-left-color:var(--div1)} .div2.side-stripe{border-left-color:var(--div2)} .div3.side-stripe{border-left-color:var(--div3)}
+    .opponent{margin:6px 0 4px;font-size:18px;font-weight:500}
+    .home-pill,.away-pill{display:inline-block;font-size:12px;font-weight:500;color:#fff;padding:2px 8px;border-radius:999px;margin-right:8px;letter-spacing:.02em}
+    .home-pill{background:var(--home)} .away-pill{background:var(--away)}
+    .meta{color:var(--muted);font-size:14px}
+    .meta a{color:var(--brand);text-decoration:none;font-weight:500}
+    .meta a:hover{text-decoration:underline}
+    .actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+    .btn{background:var(--brand);color:#000;border:none;padding:10px 12px;border-radius:10px;font-weight:500;font-size:14px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;flex:1 1 48%;min-width:0}
+    .btn.secondary{background:transparent;color:var(--text);border:1px solid var(--border)}
+
+    /* Calendar */
+    .month-block{margin:18px 0}
+    .month-title{font-weight:800;margin:8px 2px 10px;text-transform:uppercase;letter-spacing:.04em}
+    .calendar{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+    .cal-head{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));background:rgba(0,0,0,.04);padding:8px 6px;font-weight:600;font-size:12px;color:var(--muted)}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:112px}
+    .cal-cell{border-top:1px solid var(--border);border-right:1px solid var(--border);padding:8px 6px;position:relative;overflow:hidden}
+    .cal-grid .cal-cell:nth-child(7n){border-right:none}
+    .cal-cell .d{font-weight:600;color:var(--muted)}
+    .chips{position:absolute;left:6px;right:6px;bottom:6px;display:flex;flex-wrap:wrap;gap:6px}
+    .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;font-size:11px;border-radius:999px;background:#f5f5f5;color:#111;border:1px solid var(--border);cursor:pointer}
+    [data-theme="dark"] .chip{background:#1f2022;color:#fff}
+    .chip .dot{width:8px;height:8px;border-radius:50%;flex:0 0 8px}
+    .chip .dot.home{background:var(--home)} .chip .dot.away{background:var(--away)}
+    .chip.div1{border-color:var(--div1)} .chip.div2{border-color:var(--div2)} .chip.div3{border-color:var(--div3)}
+
+    /* Modal */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:100}
+    .modal.show{display:flex}
+    .modal .sheet{background:var(--card);color:var(--text);border-radius:14px;border:1px solid var(--border);max-width:520px;width:100%;padding:14px}
+    .modal .close{float:right;border:none;background:transparent;font-size:22px;cursor:pointer;color:var(--muted)}
+    .res-table{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+    .res-table th,.res-table td{border-bottom:1px solid var(--border);padding:6px 4px;text-align:left}
+    .res-head{font-weight:800;margin-top:6px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <div class="brand">
+        <!-- Swap to your hosted logo if you prefer -->
+        <img src="https://raw.githubusercontent.com/rolloweb/squashfixturesboard/main/Logo-for-COPSR.png" alt="Club Logo" />
+        <h1>
+          Peterborough Squash &amp; Racketball Club
+          <small class="official">Official Fixtures 2025–26</small>
+        </h1>
       </div>
-      <div class="opponent">${homePill}<strong>${ev.opponent}</strong></div>
-      <div class="meta"><a href="${maps}" target="_blank" rel="noopener">${ev.location}</a></div>
-      <div class="actions">${actionsHtml}</div>
-    `;
-    list.appendChild(card);
-    count++;
-  });
+      <button id="modeBtn" class="mode-btn" aria-pressed="false">Dark&nbsp;Mode</button>
+    </div>
 
-  document.getElementById('empty').style.display = count ? 'none' : 'block';
-}
+    <div class="filters">
+      <select id="division">
+        <option value="All divisions">All divisions</option>
+        <option>Div 1</option>
+        <option>Div 2</option>
+        <option>Div 3</option>
+      </select>
+      <select id="sport">
+        <option>Squash</option>
+        <option>Racketball</option>
+      </select>
+    </div>
 
-/* ========= CALENDAR VIEW ========= */
-function renderCalendarStack(){
-  const divSel   = document.getElementById('division').value;
-  const sportSel = document.getElementById('sport').value;
-  const wrap = document.getElementById('calendarStack');
-  wrap.innerHTML = '';
+    <div class="tabs">
+      <button class="tab-btn active" id="tabList">List</button>
+      <button class="tab-btn" id="tabCalendar">Calendar</button>
+    </div>
+  </header>
 
-  const parsed = DATA.map(r => ({...r, dt: parseDate(r.date, r.time)}));
-  const months = Array.from(new Set(parsed.filter(x => x.dt).map(x => monthKey(x.dt)))).sort();
+  <main>
+    <section id="listView">
+      <div id="list"></div>
+      <div id="empty" class="empty" style="display:none;">No fixtures match your filters.</div>
+    </section>
 
-  months.forEach(key => {
-    const [yS, mS] = key.split('-'); const year = +yS, monthIdx = +mS - 1;
+    <section id="calendarView" style="display:none;">
+      <div id="calendarStack"></div>
+    </section>
+  </main>
 
-    const byDay = {};
-    parsed.forEach(ev => {
-      if (!ev.dt) return;
-      if (!isAllDivisions(divSel) && ev.division !== divSel) return;
-      if (sportSel && ev.sport !== sportSel) return;
-      if (ev.dt.getFullYear() === year && ev.dt.getMonth() === monthIdx) {
-        const d = ev.dt.getDate();
-        (byDay[d] ||= []).push(ev);
+  <footer style="color:var(--muted); text-align:center; font-size:12px; padding:24px 12px 28px;">
+    Tap a location to open in Maps. Use “See results” where available; otherwise add to your calendar.
+  </footer>
+
+  <!-- Details modal -->
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-label="Details">
+    <div class="sheet">
+      <button class="close" id="modalClose" aria-label="Close">×</button>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- ========= DATA (fixtures + results) ========= -->
+  <script>
+  /* Fixtures */
+  const DATA = [
+    /* ---------- Div 1 ---------- */
+    {date:"Wed 8 Oct 2025",opponent:"Towers",homeAway:"Away",location:"Bedford Towers Health",time:"7:15pm",division:"Div 1",sport:"Squash"},
+    {date:"Wed 15 Oct 2025",opponent:"Comberton I",homeAway:"Away",location:"Comberton Squash Club",time:"7:00pm",division:"Div 1",sport:"Squash"},
+    {date:"Wed 22 Oct 2025",opponent:"Hunts County I",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 1",sport:"Squash"},
+    {date:"Mon 27 Oct 2025",opponent:"Cambridge University I",homeAway:"Away",location:"University of Cambridge Sports Centre",time:"7:00pm",division:"Div 1",sport:"Squash"},
+    {date:"Wed 5 Nov 2025",opponent:"St. Ivo I",homeAway:"Away",location:"St Ivo Rackets Club (Huntingdon)",time:"7:00pm",division:"Div 1",sport:"Squash"},
+    {date:"Wed 12 Nov 2025",opponent:"Cambridge I",homeAway:"Away",location:"Churchill College - Cambridge Squash Club",time:"7:00pm",division:"Div 1",sport:"Squash"},
+    {date:"Wed 19 Nov 2025",opponent:"Swavesey I",homeAway:"Away",location:"Swavesey Squash Club",time:"7:00pm",division:"Div 1",sport:"Squash"},
+    {date:"Wed 26 Nov 2025",opponent:"Stamford I",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 1",sport:"Squash"},
+    {date:"Wed 3 Dec 2025",opponent:"Melbourn I",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 1",sport:"Squash"},
+    {date:"Wed 14 Jan 2026",opponent:"Cambridge University I",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 1",sport:"Squash"},
+    {date:"Wed 21 Jan 2026",opponent:"Towers",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 1",sport:"Squash"},
+    {date:"Wed 28 Jan 2026",opponent:"Comberton I",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 1",sport:"Squash"},
+    {date:"Wed 4 Feb 2026",opponent:"Hunts County I",homeAway:"Away",location:"Hunts County Squash Club",time:"7:20pm",division:"Div 1",sport:"Squash"},
+    {date:"Wed 11 Feb 2026",opponent:"St. Ivo I",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 1",sport:"Squash"},
+    {date:"Wed 25 Feb 2026",opponent:"Cambridge I",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 1",sport:"Squash"},
+    {date:"Wed 4 Mar 2026",opponent:"Swavesey I",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 1",sport:"Squash"},
+    {date:"Wed 11 Mar 2026",opponent:"Stamford I",homeAway:"Away",location:"Stamford Squash Club",time:"7:10pm",division:"Div 1",sport:"Squash"},
+    {date:"Wed 18 Mar 2026",opponent:"Melbourn I",homeAway:"Away",location:"Melbourn Squash Club",time:"7:20pm",division:"Div 1",sport:"Squash"},
+    /* ---------- Div 2 ---------- */
+    {date:"Wed 8 Oct 2025",opponent:"Hunts County II",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 2",sport:"Squash"},
+    {date:"Wed 15 Oct 2025",opponent:"Saffron Walden I",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 2",sport:"Squash"},
+    {date:"Wed 22 Oct 2025",opponent:"Spalding",homeAway:"Away",location:"Spalding & District Squash Club",time:"7:30pm",division:"Div 2",sport:"Squash"},
+    {date:"Wed 5 Nov 2025",opponent:"Comberton II",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 2",sport:"Squash"},
+    {date:"Wed 12 Nov 2025",opponent:"Cambridge II",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 2",sport:"Squash"},
+    {date:"Mon 17 Nov 2025",opponent:"Cambridge University II",homeAway:"Away",location:"University of Cambridge Sports Centre",time:"7:45pm",division:"Div 2",sport:"Squash"},
+    {date:"Wed 26 Nov 2025",opponent:"Ely I",homeAway:"Away",location:"Ely Squash & Leisure",time:"7:20pm",division:"Div 2",sport:"Squash"},
+    {date:"Tue 20 Jan 2026",opponent:"Hunts County II",homeAway:"Away",location:"Hunts County Squash Club",time:"7:20pm",division:"Div 2",sport:"Squash"},
+    {date:"Wed 28 Jan 2026",opponent:"Saffron Walden I",homeAway:"Away",location:"Lord Butler Fitness & Leisure Centre",time:"7:30pm",division:"Div 2",sport:"Squash"},
+    {date:"Wed 4 Feb 2026",opponent:"Spalding",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 2",sport:"Squash"},
+    {date:"Thu 12 Feb 2026",opponent:"Comberton II",homeAway:"Away",location:"Comberton Squash Club",time:"7:00pm",division:"Div 2",sport:"Squash"},
+    {date:"Thu 26 Feb 2026",opponent:"Cambridge II",homeAway:"Away",location:"King's College School",time:"7:30pm",division:"Div 2",sport:"Squash"},
+    {date:"Wed 4 Mar 2026",opponent:"Cambridge University II",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 2",sport:"Squash"},
+    {date:"Wed 11 Mar 2026",opponent:"Ely I",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 2",sport:"Squash"},
+    /* ---------- Div 3 ---------- */
+    {date:"Wed 1 Oct 2025",opponent:"Stamford II",homeAway:"Away",location:"Stamford Squash Club",time:"7:10pm",division:"Div 3",sport:"Squash"},
+    {date:"Thu 9 Oct 2025",opponent:"Cambridge III",homeAway:"Away",location:"Churchill College - Cambridge Squash Club",time:"7:00pm",division:"Div 3",sport:"Squash"},
+    {date:"Mon 13 Oct 2025",opponent:"-",homeAway:"BYE",location:"-",time:"7:30pm",division:"Div 3",sport:"Squash"},
+    {date:"Mon 20 Oct 2025",opponent:"Melbourn II",homeAway:"Away",location:"Melbourn Squash Club",time:"7:20pm",division:"Div 3",sport:"Squash"},
+    {date:"Thu 6 Nov 2025",opponent:"Cambridge IV",homeAway:"Away",location:"King's College School",time:"7:30pm",division:"Div 3",sport:"Squash"},
+    {date:"Mon 10 Nov 2025",opponent:"Swavesey II",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 3",sport:"Squash"},
+    {date:"Mon 17 Nov 2025",opponent:"St Ivo II",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 3",sport:"Squash"},
+    {date:"Thu 27 Nov 2025",opponent:"Frank Lee",homeAway:"Away",location:"Frank Lee Leisure and Fitness",time:"7:00pm",division:"Div 3",sport:"Squash"},
+    {date:"Mon 1 Dec 2025",opponent:"Hunts County III",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 3",sport:"Squash"},
+    {date:"Mon 12 Jan 2026",opponent:"Stamford II",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 3",sport:"Squash"},
+    {date:"Mon 19 Jan 2026",opponent:"Cambridge III",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 3",sport:"Squash"},
+    {date:"Mon 26 Jan 2026",opponent:"-",homeAway:"BYE",location:"-",time:"12:00am",division:"Div 3",sport:"Squash"},
+    {date:"Mon 2 Feb 2026",opponent:"Melbourn II",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 3",sport:"Squash"},
+    {date:"Mon 9 Feb 2026",opponent:"Cambridge IV",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 3",sport:"Squash"},
+    {date:"Mon 23 Feb 2026",opponent:"Swavesey II",homeAway:"Away",location:"Swavesey Squash Club",time:"7:00pm",division:"Div 3",sport:"Squash"},
+    {date:"Tue 3 Mar 2026",opponent:"St Ivo II",homeAway:"Away",location:"St Ivo Rackets Club (Huntingdon)",time:"7:00pm",division:"Div 3",sport:"Squash"},
+    {date:"Mon 9 Mar 2026",opponent:"Frank Lee",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 3",sport:"Squash"},
+    {date:"Thu 19 Mar 2026",opponent:"Hunts County III",homeAway:"Away",location:"Hunts County Squash Club",time:"7:20pm",division:"Div 3",sport:"Squash"}
+  ];
+
+  /* Results (optional) — leave as [] or paste the JSON I can generate from your CSV)
+     Expected shape:
+     [
+       {
+         "division":"Div 1",
+         "date_iso":"2025-10-08",
+         "location":"Bedford Towers Health",
+         "team_score":3,
+         "opp_score":2,
+         "rubbers":[
+           {"pboro_player":"A Player","opponent_player":"B Player","score":"3-1"},
+           ...
+         ]
+       },
+       ...
+     ]
+  */
+  const RESULTS = [];
+  </script>
+
+  <!-- ========= MAIN APP SCRIPT ========= -->
+  <script>
+  /* Helpers */
+  function parseDate(textDate, time){
+    const m = textDate.match(/(\d{1,2})\s(\w{3})\s(\d{4})/);
+    if (!m) return null;
+    const [_, d, mon, y] = m;
+    const months = {Jan:0, Feb:1, Mar:2, Apr:3, May:4, Jun:5, Jul:6, Aug:7, Sep:8, Oct:9, Nov:10, Dec:11};
+    const t = time && time.match(/(\d{1,2}):(\d{2})(am|pm)/i);
+    let hh = 19, mm = 0;
+    if (t){ hh = +t[1]; mm = +t[2]; const ap=t[3].toLowerCase(); if(ap==='pm'&&hh<12) hh+=12; if(ap==='am'&&hh===12) hh=0; }
+    return new Date(+y, months[mon], +d, hh, mm);
+  }
+  const pad = n => String(n).padStart(2,'0');
+  const monthKey = dt => dt.getFullYear() + '-' + pad(dt.getMonth()+1);
+  const divisionClass = div => div.toLowerCase().replace(' ','');
+  const isAllDivisions = val => !val || String(val).toLowerCase().startsWith('all');
+  const mapsLink = place => (!place || place==='-' || String(place).toLowerCase()==='bye') ? '#' : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(place);
+  const fmtLocal = d => d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'T'+pad(d.getHours())+pad(d.getMinutes())+'00';
+  function googleCalLink(ev){
+    const start=ev.dt, end=new Date(start.getTime()+90*60000);
+    const q=new URLSearchParams({action:'TEMPLATE',text:`PTSRC vs ${ev.opponent} (${ev.home?'Home':'Away'})`,details:'League fixture – check league site for any updates.',location:ev.location,dates:`${fmtLocal(start)}/${fmtLocal(end)}`});
+    return 'https://calendar.google.com/calendar/render?' + q.toString();
+  }
+  function makeICS(ev){
+    const start=ev.dt, end=new Date(start.getTime()+90*60000);
+    const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//PTSRC//Fixtures//EN','BEGIN:VEVENT',`UID:${Date.now()}-${Math.random().toString(36).slice(2)}@ptsquash`,`DTSTAMP:${fmtLocal(new Date())}`,`DTSTART:${fmtLocal(start)}`,`DTEND:${fmtLocal(end)}`,`SUMMARY:PTSRC vs ${ev.opponent} (${ev.home?'Home':'Away'})`,`LOCATION:${ev.location.replace(/,/g,'\\,')}`,'DESCRIPTION:League fixture – check league site for updates.','END:VEVENT','END:VCALENDAR'].join('\r\n');
+    return URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));
+  }
+
+  /* Result index: Div|YYYY-MM-DD|location */
+  const RESULT_INDEX = (() => {
+    const m = new Map();
+    (RESULTS||[]).forEach(r => m.set(`${r.division}|${r.date_iso}|${String(r.location).toLowerCase()}`, r));
+    return m;
+  })();
+  function findResultFor(ev){
+    const iso = ev.dt.toISOString().slice(0,10);
+    const k1 = `${ev.division}|${iso}|${ev.location.toLowerCase()}`;
+    const k2 = `${ev.division}|${iso}|${(ev.opponent.split(' ')[0]||'').toLowerCase()}`;
+    return RESULT_INDEX.get(k1) || RESULT_INDEX.get(k2) || null;
+  }
+
+  /* LIST VIEW */
+  function renderList(){
+    const divSel = document.getElementById('division').value;
+    const sportSel = document.getElementById('sport').value;
+    const list = document.getElementById('list');
+    list.innerHTML=''; let count=0;
+
+    DATA.map(r => ({...r, dt: parseDate(r.date, r.time), monthKey:null})).forEach(ev => {
+      if(!ev.dt) return;
+      ev.monthKey = monthKey(ev.dt);
+      if(!isAllDivisions(divSel) && ev.division !== divSel) return;
+      if(sportSel && ev.sport !== sportSel) return;
+
+      const card = document.createElement('div');
+      const divCls = divisionClass(ev.division);
+      card.className = 'card side-stripe ' + divCls;
+      card.style.borderLeftColor = getComputedStyle(document.documentElement).getPropertyValue('--'+divCls);
+
+      const home = ev.homeAway.toLowerCase()==='home';
+      const maps = mapsLink(ev.location);
+      const gcal = googleCalLink({...ev, home});
+      const ics  = makeICS({...ev, home});
+
+      const res = findResultFor(ev);
+      let actionsHtml = '';
+      if (res){
+        const payload = JSON.stringify({division:ev.division,date:ev.date,time:ev.time,opponent:ev.opponent});
+        actionsHtml = `<a class="btn" href="#" onclick='openResult(${payload}); return false;'>See results</a>`;
+      } else {
+        actionsHtml = `
+          <a class="btn" href="${gcal}" target="_blank" rel="noopener">Add to Google</a>
+          <a class="btn secondary" href="${ics}" download="PTSRC_${ev.division.replace(' ','')}_${ev.opponent.replace(/\s+/g,'')}_${ev.monthKey}.ics">Download .ics</a>
+        `;
       }
+
+      const homePill = `<span class="${home?'home-pill':'away-pill'}">${home?'HOME':'AWAY'}</span>`;
+      const divBadge = `<span class="division-badge ${divCls}">${ev.division}</span>`;
+
+      card.innerHTML = `
+        <div class="row-top">
+          <div class="date">${ev.date} • ${ev.time}</div>
+          ${divBadge}
+        </div>
+        <div class="opponent">${homePill}<strong>${ev.opponent}</strong></div>
+        <div class="meta"><a href="${maps}" target="_blank" rel="noopener">${ev.location}</a></div>
+        <div class="actions">${actionsHtml}</div>
+      `;
+      list.appendChild(card); count++;
     });
 
-    const block = document.createElement('div'); block.className = 'month-block';
-    const title = document.createElement('div'); title.className = 'month-title';
-    title.textContent = new Date(year, monthIdx, 1).toLocaleString('en-GB', {month:'long', year:'numeric'});
+    document.getElementById('empty').style.display = count ? 'none' : 'block';
+  }
 
-    const calendar = document.createElement('div'); calendar.className = 'calendar';
-    const head = document.createElement('div'); head.className = 'cal-head';
-    head.innerHTML = '<div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>';
-    const grid = document.createElement('div'); grid.className = 'cal-grid';
+  /* CALENDAR VIEW */
+  function renderCalendarStack(){
+    const divSel = document.getElementById('division').value;
+    const sportSel = document.getElementById('sport').value;
+    const wrap = document.getElementById('calendarStack');
+    wrap.innerHTML='';
 
-    let start = new Date(year, monthIdx, 1).getDay(); start = (start === 0) ? 6 : start - 1;
-    const daysTotal = new Date(year, monthIdx+1, 0).getDate();
+    const parsed = DATA.map(r => ({...r, dt: parseDate(r.date, r.time)}));
+    const months = Array.from(new Set(parsed.filter(x=>x.dt).map(x=>monthKey(x.dt)))).sort();
 
-    for (let i=0;i<start;i++){ const c = document.createElement('div'); c.className='cal-cell'; grid.appendChild(c); }
-    for (let d=1; d<=daysTotal; d++){
-      const cell = document.createElement('div'); cell.className='cal-cell';
-      const dn = document.createElement('div'); dn.className='d'; dn.textContent = d; cell.appendChild(dn);
+    months.forEach(key => {
+      const [yS,mS] = key.split('-'); const year=+yS, monthIdx=+mS-1;
 
-      const chips = document.createElement('div'); chips.className='chips';
-      (byDay[d]||[]).sort((a,b)=> a.time.localeCompare(b.time)).forEach(ev => {
-        if (ev.opponent === '-' || ev.homeAway.toLowerCase() === 'bye') return;
-        const divCls = divisionClass(ev.division);
-        const chip = document.createElement('div'); chip.className='chip '+divCls;
-        const dot  = document.createElement('span'); dot.className='dot '+(ev.homeAway.toLowerCase()==='home'?'home':'away');
-        chip.appendChild(dot);
-        const txt  = document.createElement('span'); txt.textContent = ev.division.toUpperCase().replace(' ','');
-        chip.appendChild(txt);
-        chip.addEventListener('click', (e) => {
-          e.stopPropagation();
-          openResult({ division: ev.division, date: ev.date, time: ev.time, opponent: ev.opponent });
-        });
-        chips.appendChild(chip);
+      const byDay = {};
+      parsed.forEach(ev => {
+        if(!ev.dt) return;
+        if(!isAllDivisions(divSel) && ev.division !== divSel) return;
+        if(sportSel && ev.sport !== sportSel) return;
+        if(ev.dt.getFullYear()===year && ev.dt.getMonth()===monthIdx){
+          const d = ev.dt.getDate();
+          (byDay[d] ||= []).push(ev);
+        }
       });
-      cell.appendChild(chips);
-      grid.appendChild(cell);
+
+      const block = document.createElement('div'); block.className='month-block';
+      const title = document.createElement('div'); title.className='month-title';
+      title.textContent = new Date(year, monthIdx, 1).toLocaleString('en-GB',{month:'long',year:'numeric'});
+
+      const calendar = document.createElement('div'); calendar.className='calendar';
+      const head = document.createElement('div'); head.className='cal-head';
+      head.innerHTML = '<div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>';
+      const grid = document.createElement('div'); grid.className='cal-grid';
+
+      let start = new Date(year, monthIdx, 1).getDay(); start = (start===0)?6:start-1;
+      const daysTotal = new Date(year, monthIdx+1, 0).getDate();
+
+      for(let i=0;i<start;i++){ const c=document.createElement('div'); c.className='cal-cell'; grid.appendChild(c); }
+      for(let d=1; d<=daysTotal; d++){
+        const cell=document.createElement('div'); cell.className='cal-cell';
+        const dn=document.createElement('div'); dn.className='d'; dn.textContent=d; cell.appendChild(dn);
+
+        const chips=document.createElement('div'); chips.className='chips';
+        (byDay[d]||[]).sort((a,b)=>a.time.localeCompare(b.time)).forEach(ev=>{
+          if(ev.opponent==='-' || ev.homeAway.toLowerCase()==='bye') return;
+          const divCls=divisionClass(ev.division);
+          const chip=document.createElement('div'); chip.className='chip '+divCls;
+          const dot=document.createElement('span'); dot.className='dot '+(ev.homeAway.toLowerCase()==='home'?'home':'away');
+          chip.appendChild(dot);
+          const txt=document.createElement('span'); txt.textContent=ev.division.toUpperCase().replace(' ','');
+          chip.appendChild(txt);
+          chip.addEventListener('click',(e)=>{ e.stopPropagation(); openResult({division:ev.division,date:ev.date,time:ev.time,opponent:ev.opponent}); });
+          chips.appendChild(chip);
+        });
+        cell.appendChild(chips);
+        grid.appendChild(cell);
+      }
+
+      calendar.appendChild(head); calendar.appendChild(grid);
+      block.appendChild(title); block.appendChild(calendar);
+      wrap.appendChild(block);
+    });
+  }
+
+  /* RESULTS MODAL */
+  function openResult(ref){
+    const ev = DATA.map(r=>({...r, dt: parseDate(r.date, r.time)}))
+                   .find(x=>x.date===ref.date && x.division===ref.division && x.opponent===ref.opponent);
+    const modal=document.getElementById('modal'); const body=document.getElementById('modalBody');
+
+    if(!ev || !ev.dt){
+      body.innerHTML='<div class="card">No details found.</div>';
+      modal.classList.add('show'); return;
+    }
+    const iso = ev.dt.toISOString().slice(0,10);
+    const k1 = `${ev.division}|${iso}|${ev.location.toLowerCase()}`;
+    const k2 = `${ev.division}|${iso}|${(ev.opponent.split(' ')[0]||'').toLowerCase()}`;
+    const res = RESULT_INDEX.get(k1) || RESULT_INDEX.get(k2);
+
+    if(!res){
+      body.innerHTML = `<div class="card"><div class="res-head">No result found for ${ev.division} – ${ev.date}</div></div>`;
+      modal.classList.add('show'); return;
     }
 
-    calendar.appendChild(head); calendar.appendChild(grid);
-    block.appendChild(title); block.appendChild(calendar);
-    wrap.appendChild(block);
-  });
-}
-
-/* ========= RESULTS MODAL ========= */
-function openResult(ref){
-  const ev = DATA.map(r => ({...r, dt: parseDate(r.date, r.time)}))
-                 .find(x => x.date===ref.date && x.division===ref.division && x.opponent===ref.opponent);
-  const modal = document.getElementById('modal');
-  const body  = document.getElementById('modalBody');
-
-  if (!ev || !ev.dt){
-    body.innerHTML = '<div class="card">No details found.</div>';
-    modal.classList.add('show'); return;
-  }
-  const iso = ev.dt.toISOString().slice(0,10);
-  const key1 = `${ev.division}|${iso}|${ev.location.toLowerCase()}`;
-  const key2 = `${ev.division}|${iso}|${(ev.opponent.split(' ')[0]||'').toLowerCase()}`;
-  const res = RESULT_INDEX.get(key1) || RESULT_INDEX.get(key2);
-
-  if (!res){
-    body.innerHTML = `<div class="card"><div class="res-head">No result found for ${ev.division} – ${ev.date}</div></div>`;
-    modal.classList.add('show'); return;
+    const head = `<div class="row-top"><div class="date">${ev.date} • ${ev.time}</div><span class="division-badge ${divisionClass(ev.division)}">${ev.division}</span></div>`;
+    const rows = (res.rubbers||[]).map(r=>`<tr><td>${r.pboro_player}</td><td>${r.opponent_player}</td><td>${r.score}</td></tr>`).join('');
+    body.innerHTML = `<div class="card">${head}<div class="opponent" style="margin-top:6px"><strong>${ev.opponent}</strong></div><div class="res-head">Result: <strong>${res.team_score}–${res.opp_score}</strong> (PTSRC – ${ev.opponent})</div><table class="res-table"><thead><tr><th>PTSRC</th><th>Opponent</th><th>Score</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    modal.classList.add('show');
   }
 
-  const head = `<div class="row-top"><div class="date">${ev.date} • ${ev.time}</div><span class="division-badge ${divisionClass(ev.division)}">${ev.division}</span></div>`;
-  const rows = res.rubbers.map(r => `<tr><td>${r.pboro_player}</td><td>${r.opponent_player}</td><td>${r.score}</td></tr>`).join('');
-  body.innerHTML = `<div class="card">${head}<div class="opponent" style="margin-top:6px"><strong>${ev.opponent}</strong></div><div class="res-head">Result: <strong>${res.team_score}–${res.opp_score}</strong> (PTSRC – ${ev.opponent})</div><table class="res-table"><thead><tr><th>PTSRC</th><th>Opponent</th><th>Score</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-  modal.classList.add('show');
-}
+  /* Wiring */
+  document.getElementById('modalClose').addEventListener('click',()=>document.getElementById('modal').classList.remove('show'));
+  document.getElementById('modal').addEventListener('click',(e)=>{ if(e.target.id==='modal') e.currentTarget.classList.remove('show'); });
+  document.addEventListener('keydown',(e)=>{ if(e.key==='Escape') document.getElementById('modal').classList.remove('show'); });
 
-/* ========= Wiring ========= */
-document.getElementById('modalClose').addEventListener('click', () => document.getElementById('modal').classList.remove('show'));
-document.getElementById('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') e.currentTarget.classList.remove('show'); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.getElementById('modal').classList.remove('show'); });
+  document.getElementById('division').addEventListener('change',()=>{ renderList(); renderCalendarStack(); });
+  document.getElementById('sport').addEventListener('change',()=>{ renderList(); renderCalendarStack(); });
 
-document.getElementById('division').addEventListener('change', () => { renderList(); renderCalendarStack(); });
-document.getElementById('sport').addEventListener('change', () => { renderList(); renderCalendarStack(); });
+  const tabList=document.getElementById('tabList'), tabCal=document.getElementById('tabCalendar');
+  tabList.addEventListener('click',()=>{ tabList.classList.add('active'); tabCal.classList.remove('active'); document.getElementById('listView').style.display='block'; document.getElementById('calendarView').style.display='none'; });
+  tabCal.addEventListener('click',()=>{ tabCal.classList.add('active'); tabList.classList.remove('active'); document.getElementById('listView').style.display='none'; document.getElementById('calendarView').style.display='block'; });
 
-const tabList = document.getElementById('tabList');
-const tabCal  = document.getElementById('tabCalendar');
-tabList.addEventListener('click', () => { tabList.classList.add('active'); tabCal.classList.remove('active'); document.getElementById('listView').style.display='block'; document.getElementById('calendarView').style.display='none'; });
-tabCal.addEventListener('click',  () => { tabCal.classList.add('active');  tabList.classList.remove('active'); document.getElementById('listView').style.display='none';  document.getElementById('calendarView').style.display='block'; });
+  const modeBtn=document.getElementById('modeBtn');
+  modeBtn.addEventListener('click',()=>{ const html=document.documentElement; const dark=html.getAttribute('data-theme')==='dark'; html.setAttribute('data-theme', dark?'light':'dark'); modeBtn.textContent=dark?'Dark Mode':'Light Mode'; modeBtn.setAttribute('aria-pressed', (!dark).toString()); });
 
-const modeBtn = document.getElementById('modeBtn');
-modeBtn.addEventListener('click', () => {
-  const html = document.documentElement;
-  const dark = html.getAttribute('data-theme') === 'dark';
-  html.setAttribute('data-theme', dark ? 'light' : 'dark');
-  modeBtn.textContent = dark ? 'Dark Mode' : 'Light Mode';
-  modeBtn.setAttribute('aria-pressed', (!dark).toString());
-});
+  /* Initial render */
+  renderList();
+  renderCalendarStack();
+  </script>
 
-/* Initial render */
-renderList();
-renderCalendarStack();
-</script>
-<!-- END MAIN APP SCRIPT -->
+  <!-- ========= Auto-resize for Squarespace iframe ========= -->
+  <script>
+    (function () {
+      function postHeight(){ var h=document.documentElement.scrollHeight; parent.postMessage({ fixturesHeight:h }, '*'); }
+      window.addEventListener('load', postHeight);
+      window.addEventListener('resize', postHeight);
+      if (window.ResizeObserver) new ResizeObserver(postHeight).observe(document.documentElement);
+      setInterval(postHeight, 1000);
+    })();
+  </script>
+</body>
+</html>
