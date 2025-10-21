@@ -8,33 +8,17 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;800;900&display=swap" rel="stylesheet">
-
   <style>
     :root{
-      --brand:#fa6600;
-      --bg:#ffffff;
-      --card:#ffffff;
-      --text:#0f0f10;
-      --muted:#545454;
-      --border:#e5e5e5;
-      --home:#16a34a;
-      --away:#d97706;
-      --div1:#fa6600;
-      --div2:#2563eb;
-      --div3:#9333ea;
+      --brand:#fa6600; --bg:#ffffff; --card:#ffffff; --text:#0f0f10; --muted:#545454; --border:#e5e5e5;
+      --home:#16a34a; --away:#d97706; --div1:#fa6600; --div2:#2563eb; --div3:#9333ea;
     }
     [data-theme="dark"]{
-      --bg:#0f0f10;
-      --card:#151618;
-      --text:#f6f6f6;
-      --muted:#b9b9b9;
-      --border:#2b2c2d;
+      --bg:#0f0f10; --card:#151618; --text:#f6f6f6; --muted:#b9b9b9; --border:#2b2c2d;
     }
-
     *{box-sizing:border-box}
     html,body{max-width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%}
     body{margin:0;font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;background:var(--bg);color:var(--text)}
-
     header{position:sticky;top:0;z-index:10;background:var(--bg);padding:20px 18px;border-bottom:1px solid var(--border)}
     .topbar{display:flex;align-items:center;justify-content:space-between;gap:8px}
     .brand{display:flex;align-items:center;gap:12px}
@@ -42,18 +26,14 @@
     .brand h1{font-size:20px;margin:0;line-height:1.1;font-weight:800}
     .brand small{display:block;color:var(--muted);font-weight:500;letter-spacing:.2px}
     .official{color:var(--brand);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.08em}
-
     .mode-btn{background:#f2f2f2;border:1px solid var(--border);color:#000;padding:10px 12px;border-radius:10px;font-weight:500;cursor:pointer}
     [data-theme="dark"] .mode-btn{background:#242526;color:#fff}
-
     .filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
     select{width:100%;padding:12px 10px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:16px}
-
     .tabs{display:flex;gap:8px;margin:10px 0 0}
     .tab-btn{flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--bg);font-weight:500;cursor:pointer;color:var(--text)}
     .tab-btn.active{background:var(--brand);color:#fff;border-color:var(--brand)}
     [data-theme="dark"] .tab-btn{background:#1f2022;color:var(--text)}
-
     main{padding:12px}
     .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px;margin:10px 0}
     .row-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -71,7 +51,6 @@
     .actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
     .btn{background:var(--brand);color:#000;border:none;padding:10px 12px;border-radius:10px;font-weight:500;font-size:14px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;flex:1 1 48%;min-width:0}
     .btn.secondary{background:transparent;color:var(--text);border:1px solid var(--border)}
-
     /* Calendar */
     .month-block{margin:18px 0}
     .month-title{font-weight:800;margin:8px 2px 10px;text-transform:uppercase;letter-spacing:.04em}
@@ -87,7 +66,6 @@
     .chip .dot{width:8px;height:8px;border-radius:50%;flex:0 0 8px}
     .chip .dot.home{background:var(--home)} .chip .dot.away{background:var(--away)}
     .chip.div1{border-color:var(--div1)} .chip.div2{border-color:var(--div2)} .chip.div3{border-color:var(--div3)}
-
     /* Modal */
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:100}
     .modal.show{display:flex}
@@ -102,8 +80,8 @@
   <header>
     <div class="topbar">
       <div class="brand">
-        <!-- Swap to your hosted logo if you prefer -->
-        <img src="https://raw.githubusercontent.com/rolloweb/squashfixturesboard/main/Logo-for-COPSR.png" alt="Club Logo" />
+        <!-- Use your GitHub Pages path so it works everywhere -->
+        <img src="https://rolloweb.github.io/squashfixturesboard/Logo-for-COPSR.png" alt="Club Logo">
         <h1>
           Peterborough Squash &amp; Racketball Club
           <small class="official">Official Fixtures 2025–26</small>
@@ -111,20 +89,15 @@
       </div>
       <button id="modeBtn" class="mode-btn" aria-pressed="false">Dark&nbsp;Mode</button>
     </div>
-
     <div class="filters">
       <select id="division">
         <option value="All divisions">All divisions</option>
-        <option>Div 1</option>
-        <option>Div 2</option>
-        <option>Div 3</option>
+        <option>Div 1</option><option>Div 2</option><option>Div 3</option>
       </select>
       <select id="sport">
-        <option>Squash</option>
-        <option>Racketball</option>
+        <option>Squash</option><option>Racketball</option>
       </select>
     </div>
-
     <div class="tabs">
       <button class="tab-btn active" id="tabList">List</button>
       <button class="tab-btn" id="tabCalendar">Calendar</button>
@@ -143,10 +116,9 @@
   </main>
 
   <footer style="color:var(--muted); text-align:center; font-size:12px; padding:24px 12px 28px;">
-    Tap a location to open in Maps. Use “See results” where available; otherwise add to your calendar.
+    Tap a location to open in Maps. Where available use “See results”.
   </footer>
 
-  <!-- Details modal -->
   <div id="modal" class="modal" role="dialog" aria-modal="true" aria-label="Details">
     <div class="sheet">
       <button class="close" id="modalClose" aria-label="Close">×</button>
@@ -154,9 +126,8 @@
     </div>
   </div>
 
-  <!-- ========= DATA (fixtures + results) ========= -->
+  <!-- ======= DATA (fixtures) ======= -->
   <script>
-  /* Fixtures */
   const DATA = [
     /* ---------- Div 1 ---------- */
     {date:"Wed 8 Oct 2025",opponent:"Towers",homeAway:"Away",location:"Bedford Towers Health",time:"7:15pm",division:"Div 1",sport:"Squash"},
@@ -212,30 +183,12 @@
     {date:"Mon 9 Mar 2026",opponent:"Frank Lee",homeAway:"Home",location:"Peterborough Town Squash Club",time:"7:30pm",division:"Div 3",sport:"Squash"},
     {date:"Thu 19 Mar 2026",opponent:"Hunts County III",homeAway:"Away",location:"Hunts County Squash Club",time:"7:20pm",division:"Div 3",sport:"Squash"}
   ];
-
-  /* Results (optional) — leave as [] or paste the JSON I can generate from your CSV)
-     Expected shape:
-     [
-       {
-         "division":"Div 1",
-         "date_iso":"2025-10-08",
-         "location":"Bedford Towers Health",
-         "team_score":3,
-         "opp_score":2,
-         "rubbers":[
-           {"pboro_player":"A Player","opponent_player":"B Player","score":"3-1"},
-           ...
-         ]
-       },
-       ...
-     ]
-  */
-  const RESULTS = [];
   </script>
 
-  <!-- ========= MAIN APP SCRIPT ========= -->
+  <!-- ======= APP (renders fixtures + loads results CSV) ======= -->
   <script>
-  /* Helpers */
+  /* ---------- helpers ---------- */
+  const pad = n => String(n).padStart(2,'0');
   function parseDate(textDate, time){
     const m = textDate.match(/(\d{1,2})\s(\w{3})\s(\d{4})/);
     if (!m) return null;
@@ -246,7 +199,6 @@
     if (t){ hh = +t[1]; mm = +t[2]; const ap=t[3].toLowerCase(); if(ap==='pm'&&hh<12) hh+=12; if(ap==='am'&&hh===12) hh=0; }
     return new Date(+y, months[mon], +d, hh, mm);
   }
-  const pad = n => String(n).padStart(2,'0');
   const monthKey = dt => dt.getFullYear() + '-' + pad(dt.getMonth()+1);
   const divisionClass = div => div.toLowerCase().replace(' ','');
   const isAllDivisions = val => !val || String(val).toLowerCase().startsWith('all');
@@ -263,12 +215,69 @@
     return URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));
   }
 
-  /* Result index: Div|YYYY-MM-DD|location */
-  const RESULT_INDEX = (() => {
-    const m = new Map();
-    (RESULTS||[]).forEach(r => m.set(`${r.division}|${r.date_iso}|${String(r.location).toLowerCase()}`, r));
-    return m;
-  })();
+  /* ---------- results loader from CSV ---------- */
+  let RESULT_INDEX = new Map();
+  async function loadResults(){
+    try{
+      const csvUrl = 'https://rolloweb.github.io/squashfixturesboard/Squash%20Resultsweb.csv';
+      const res = await fetch(csvUrl, {cache:'no-store'});
+      if (!res.ok) throw new Error('CSV not found');
+      const text = await res.text();
+      const rows = text.split(/\r?\n/).filter(Boolean).map(r=>r.split(','));
+      const headers = rows.shift().map(h=>h.trim());
+      const col = name => headers.findIndex(h => h.toLowerCase() === name.toLowerCase());
+
+      const iTeam   = col('Team');
+      const iDate   = col('Fixture date');
+      const iLoc    = col('Location');
+      const iPB     = col('Peterborough Player');
+      const iOppPl  = col('Opponent');
+      const iScore  = col('Match Result');
+
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const withYear = dstr => {
+        const m = String(dstr).trim().match(/^(\d{1,2})-(\w{3})$/i);
+        if (!m) return null;
+        const day = +m[1], mon = m[2].slice(0,3).toLowerCase();
+        const monIdx = months.findIndex(x=>x.toLowerCase()===mon)+1;
+        const year = ['oct','nov','dec'].includes(mon) ? 2025 : 2026;
+        return `${year}-${String(monIdx).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      };
+      const toDiv = team => {
+        const s = String(team).toLowerCase();
+        if (s.includes('first')) return 'Div 1';
+        if (s.includes('second') || s.includes('2nd')) return 'Div 2';
+        if (s.includes('third')  || s.includes('3rd')) return 'Div 3';
+        return 'Unknown';
+      };
+
+      const map = new Map();
+      rows.forEach(r=>{
+        const div  = toDiv(r[iTeam]);
+        const iso  = withYear(r[iDate]);
+        const loc  = String(r[iLoc]||'').trim();
+        const pb   = String(r[iPB]||'').trim();
+        const oppP = String(r[iOppPl]||'').trim();
+        const sc   = String(r[iScore]||'').trim();
+        if (!iso || !loc) return;
+
+        const key = `${div}|${iso}|${loc.toLowerCase()}`;
+        if (!map.has(key)) map.set(key, {division:div, date_iso:iso, location:loc, team_score:0, opp_score:0, rubbers:[]});
+        const obj = map.get(key);
+
+        const m = sc.match(/(\d+)\s*-\s*(\d+)/);
+        let a=0,b=0; if (m){ a=+m[1]; b=+m[2]; }
+        if (a>b) obj.team_score++; else if (b>a) obj.opp_score++;
+        obj.rubbers.push({pboro_player:pb, opponent_player:oppP, score:sc});
+      });
+      RESULT_INDEX = map;
+    }catch(err){
+      // no results available; keep empty index
+      RESULT_INDEX = new Map();
+      console.warn('Results not loaded:', err);
+    }
+  }
+
   function findResultFor(ev){
     const iso = ev.dt.toISOString().slice(0,10);
     const k1 = `${ev.division}|${iso}|${ev.location.toLowerCase()}`;
@@ -276,14 +285,14 @@
     return RESULT_INDEX.get(k1) || RESULT_INDEX.get(k2) || null;
   }
 
-  /* LIST VIEW */
+  /* ---------- list view ---------- */
   function renderList(){
     const divSel = document.getElementById('division').value;
     const sportSel = document.getElementById('sport').value;
     const list = document.getElementById('list');
     list.innerHTML=''; let count=0;
 
-    DATA.map(r => ({...r, dt: parseDate(r.date, r.time), monthKey:null})).forEach(ev => {
+    DATA.map(r => ({...r, dt: parseDate(r.date, r.time), monthKey:null})).forEach(ev=>{
       if(!ev.dt) return;
       ev.monthKey = monthKey(ev.dt);
       if(!isAllDivisions(divSel) && ev.division !== divSel) return;
@@ -313,7 +322,6 @@
 
       const homePill = `<span class="${home?'home-pill':'away-pill'}">${home?'HOME':'AWAY'}</span>`;
       const divBadge = `<span class="division-badge ${divCls}">${ev.division}</span>`;
-
       card.innerHTML = `
         <div class="row-top">
           <div class="date">${ev.date} • ${ev.time}</div>
@@ -325,11 +333,10 @@
       `;
       list.appendChild(card); count++;
     });
-
     document.getElementById('empty').style.display = count ? 'none' : 'block';
   }
 
-  /* CALENDAR VIEW */
+  /* ---------- calendar view ---------- */
   function renderCalendarStack(){
     const divSel = document.getElementById('division').value;
     const sportSel = document.getElementById('sport').value;
@@ -339,31 +346,29 @@
     const parsed = DATA.map(r => ({...r, dt: parseDate(r.date, r.time)}));
     const months = Array.from(new Set(parsed.filter(x=>x.dt).map(x=>monthKey(x.dt)))).sort();
 
-    months.forEach(key => {
+    months.forEach(key=>{
       const [yS,mS] = key.split('-'); const year=+yS, monthIdx=+mS-1;
-
       const byDay = {};
-      parsed.forEach(ev => {
+      parsed.forEach(ev=>{
         if(!ev.dt) return;
         if(!isAllDivisions(divSel) && ev.division !== divSel) return;
         if(sportSel && ev.sport !== sportSel) return;
         if(ev.dt.getFullYear()===year && ev.dt.getMonth()===monthIdx){
-          const d = ev.dt.getDate();
-          (byDay[d] ||= []).push(ev);
+          const d = ev.dt.getDate(); (byDay[d] ||= []).push(ev);
         }
       });
 
-      const block = document.createElement('div'); block.className='month-block';
-      const title = document.createElement('div'); title.className='month-title';
+      const block=document.createElement('div'); block.className='month-block';
+      const title=document.createElement('div'); title.className='month-title';
       title.textContent = new Date(year, monthIdx, 1).toLocaleString('en-GB',{month:'long',year:'numeric'});
 
-      const calendar = document.createElement('div'); calendar.className='calendar';
-      const head = document.createElement('div'); head.className='cal-head';
-      head.innerHTML = '<div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>';
-      const grid = document.createElement('div'); grid.className='cal-grid';
+      const calendar=document.createElement('div'); calendar.className='calendar';
+      const head=document.createElement('div'); head.className='cal-head';
+      head.innerHTML='<div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>';
+      const grid=document.createElement('div'); grid.className='cal-grid';
 
-      let start = new Date(year, monthIdx, 1).getDay(); start = (start===0)?6:start-1;
-      const daysTotal = new Date(year, monthIdx+1, 0).getDate();
+      let start=new Date(year,monthIdx,1).getDay(); start = (start===0)?6:start-1;
+      const daysTotal=new Date(year,monthIdx+1,0).getDate();
 
       for(let i=0;i<start;i++){ const c=document.createElement('div'); c.className='cal-cell'; grid.appendChild(c); }
       for(let d=1; d<=daysTotal; d++){
@@ -392,7 +397,7 @@
     });
   }
 
-  /* RESULTS MODAL */
+  /* ---------- results modal ---------- */
   function openResult(ref){
     const ev = DATA.map(r=>({...r, dt: parseDate(r.date, r.time)}))
                    .find(x=>x.date===ref.date && x.division===ref.division && x.opponent===ref.opponent);
@@ -418,7 +423,8 @@
     modal.classList.add('show');
   }
 
-  /* Wiring */
+  /* ---------- wiring ---------- */
+  document.getElementById('division').value = 'All divisions';
   document.getElementById('modalClose').addEventListener('click',()=>document.getElementById('modal').classList.remove('show'));
   document.getElementById('modal').addEventListener('click',(e)=>{ if(e.target.id==='modal') e.currentTarget.classList.remove('show'); });
   document.addEventListener('keydown',(e)=>{ if(e.key==='Escape') document.getElementById('modal').classList.remove('show'); });
@@ -433,12 +439,12 @@
   const modeBtn=document.getElementById('modeBtn');
   modeBtn.addEventListener('click',()=>{ const html=document.documentElement; const dark=html.getAttribute('data-theme')==='dark'; html.setAttribute('data-theme', dark?'light':'dark'); modeBtn.textContent=dark?'Dark Mode':'Light Mode'; modeBtn.setAttribute('aria-pressed', (!dark).toString()); });
 
-  /* Initial render */
-  renderList();
-  renderCalendarStack();
+  // Initial render, then load results & re-render actions where applicable
+  renderList(); renderCalendarStack();
+  loadResults().then(()=>{ renderList(); renderCalendarStack(); });
   </script>
 
-  <!-- ========= Auto-resize for Squarespace iframe ========= -->
+  <!-- ======= Squarespace iframe auto-resize ======= -->
   <script>
     (function () {
       function postHeight(){ var h=document.documentElement.scrollHeight; parent.postMessage({ fixturesHeight:h }, '*'); }
