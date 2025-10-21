@@ -80,7 +80,6 @@
   <header>
     <div class="topbar">
       <div class="brand">
-        <!-- Use your GitHub Pages path so it works everywhere -->
         <img src="https://rolloweb.github.io/squashfixturesboard/Logo-for-COPSR.png" alt="Club Logo">
         <h1>
           Peterborough Squash &amp; Racketball Club
@@ -185,7 +184,7 @@
   ];
   </script>
 
-  <!-- ======= APP (renders fixtures + loads results CSV) ======= -->
+  <!-- ======= APP (fixtures + results loader) ======= -->
   <script>
   /* ---------- helpers ---------- */
   const pad = n => String(n).padStart(2,'0');
@@ -201,7 +200,8 @@
   }
   const monthKey = dt => dt.getFullYear() + '-' + pad(dt.getMonth()+1);
   const divisionClass = div => div.toLowerCase().replace(' ','');
-  const isAllDivisions = val => !val || String(val).toLowerCase().startsWith('all');
+  function isAllDivisions(val){ return !val || String(val).trim().toLowerCase().startsWith('all'); }
+  function sameDivision(a,b){ return String(a).trim().toLowerCase() === String(b).trim().toLowerCase(); }
   const mapsLink = place => (!place || place==='-' || String(place).toLowerCase()==='bye') ? '#' : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(place);
   const fmtLocal = d => d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'T'+pad(d.getHours())+pad(d.getMinutes())+'00';
   function googleCalLink(ev){
@@ -214,13 +214,6 @@
     const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//PTSRC//Fixtures//EN','BEGIN:VEVENT',`UID:${Date.now()}-${Math.random().toString(36).slice(2)}@ptsquash`,`DTSTAMP:${fmtLocal(new Date())}`,`DTSTART:${fmtLocal(start)}`,`DTEND:${fmtLocal(end)}`,`SUMMARY:PTSRC vs ${ev.opponent} (${ev.home?'Home':'Away'})`,`LOCATION:${ev.location.replace(/,/g,'\\,')}`,'DESCRIPTION:League fixture – check league site for updates.','END:VEVENT','END:VCALENDAR'].join('\r\n');
     return URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));
   }
-    function isAllDivisions(val) {
-  return !val || String(val).trim().toLowerCase().startsWith('all');
-}
-function sameDivision(a, b) {
-  return String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
-}
-
 
   /* ---------- results loader from CSV ---------- */
   let RESULT_INDEX = new Map();
@@ -228,10 +221,14 @@ function sameDivision(a, b) {
     try{
       const csvUrl = 'https://rolloweb.github.io/squashfixturesboard/Squash%20Resultsweb.csv';
       const res = await fetch(csvUrl, {cache:'no-store'});
+      console.log('Results fetch status:', res.status);
       if (!res.ok) throw new Error('CSV not found');
       const text = await res.text();
+
+      // very simple CSV split (handles unquoted commas poorly; ok for this sheet)
       const rows = text.split(/\r?\n/).filter(Boolean).map(r=>r.split(','));
       const headers = rows.shift().map(h=>h.trim());
+      console.log('Results headers:', headers);
       const col = name => headers.findIndex(h => h.toLowerCase() === name.toLowerCase());
 
       const iTeam   = col('Team');
@@ -240,6 +237,10 @@ function sameDivision(a, b) {
       const iPB     = col('Peterborough Player');
       const iOppPl  = col('Opponent');
       const iScore  = col('Match Result');
+      if ([iTeam,iDate,iLoc,iPB,iOppPl,iScore].some(i=>i<0)){
+        console.warn('Missing expected columns. Found:', headers);
+        RESULT_INDEX = new Map(); return;
+      }
 
       const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
       const withYear = dstr => {
@@ -278,8 +279,8 @@ function sameDivision(a, b) {
         obj.rubbers.push({pboro_player:pb, opponent_player:oppP, score:sc});
       });
       RESULT_INDEX = map;
+      console.log('Results loaded. Matches indexed:', map.size);
     }catch(err){
-      // no results available; keep empty index
       RESULT_INDEX = new Map();
       console.warn('Results not loaded:', err);
     }
@@ -294,8 +295,6 @@ function sameDivision(a, b) {
 
   /* ---------- list view ---------- */
   function renderList(){
-    const matchesAll = isAllDivisions(divSel);
-if (!matchesAll && !sameDivision(ev.division, divSel)) return;
     const divSel = document.getElementById('division').value;
     const sportSel = document.getElementById('sport').value;
     const list = document.getElementById('list');
@@ -304,8 +303,10 @@ if (!matchesAll && !sameDivision(ev.division, divSel)) return;
     DATA.map(r => ({...r, dt: parseDate(r.date, r.time), monthKey:null})).forEach(ev=>{
       if(!ev.dt) return;
       ev.monthKey = monthKey(ev.dt);
-      if(!isAllDivisions(divSel) && ev.division !== divSel) return;
-      if(sportSel && ev.sport !== sportSel) return;
+
+      const matchesAll = isAllDivisions(divSel);
+      if (!matchesAll && !sameDivision(ev.division, divSel)) return;
+      if (sportSel && ev.sport !== sportSel) return;
 
       const card = document.createElement('div');
       const divCls = divisionClass(ev.division);
@@ -347,8 +348,6 @@ if (!matchesAll && !sameDivision(ev.division, divSel)) return;
 
   /* ---------- calendar view ---------- */
   function renderCalendarStack(){
-   const matchesAll = isAllDivisions(divSel);
-if (!matchesAll && !sameDivision(ev.division, divSel)) return;
     const divSel = document.getElementById('division').value;
     const sportSel = document.getElementById('sport').value;
     const wrap = document.getElementById('calendarStack');
@@ -362,8 +361,11 @@ if (!matchesAll && !sameDivision(ev.division, divSel)) return;
       const byDay = {};
       parsed.forEach(ev=>{
         if(!ev.dt) return;
-        if(!isAllDivisions(divSel) && ev.division !== divSel) return;
-        if(sportSel && ev.sport !== sportSel) return;
+
+        const matchesAll = isAllDivisions(divSel);
+        if (!matchesAll && !sameDivision(ev.division, divSel)) return;
+        if (sportSel && ev.sport !== sportSel) return;
+
         if(ev.dt.getFullYear()===year && ev.dt.getMonth()===monthIdx){
           const d = ev.dt.getDate(); (byDay[d] ||= []).push(ev);
         }
@@ -406,31 +408,7 @@ if (!matchesAll && !sameDivision(ev.division, divSel)) return;
       block.appendChild(title); block.appendChild(calendar);
       wrap.appendChild(block);
     });
- <script>
-  /* ---------- wiring ---------- */
-  // 1) Force the default to All divisions (must run AFTER the <select> exists)
-  document.getElementById('division').value = 'All divisions';
-
-  // 2) Event listeners
-  document.getElementById('division').addEventListener('change', () => { renderList(); renderCalendarStack(); });
-  document.getElementById('sport').addEventListener('change',   () => { renderList(); renderCalendarStack(); });
-
-  const tabList = document.getElementById('tabList');
-  const tabCal  = document.getElementById('tabCalendar');
-  tabList.addEventListener('click', () => { /* ... */ });
-  tabCal .addEventListener('click', () => { /* ... */ });
-
-  const modeBtn = document.getElementById('modeBtn');
-  modeBtn.addEventListener('click', () => { /* ... */ });
-
-  // 3) Initial render
-  renderList();
-  renderCalendarStack();
-
-  // 4) Load results, then re-render to show “See results” buttons
-  loadResults().then(() => { renderList(); renderCalendarStack(); });
- });
- <script>
+  }
 
   /* ---------- results modal ---------- */
   function openResult(ref){
@@ -459,7 +437,10 @@ if (!matchesAll && !sameDivision(ev.division, divSel)) return;
   }
 
   /* ---------- wiring ---------- */
+  // Force default to "All divisions"
   document.getElementById('division').value = 'All divisions';
+
+  // Listeners
   document.getElementById('modalClose').addEventListener('click',()=>document.getElementById('modal').classList.remove('show'));
   document.getElementById('modal').addEventListener('click',(e)=>{ if(e.target.id==='modal') e.currentTarget.classList.remove('show'); });
   document.addEventListener('keydown',(e)=>{ if(e.key==='Escape') document.getElementById('modal').classList.remove('show'); });
@@ -474,11 +455,10 @@ if (!matchesAll && !sameDivision(ev.division, divSel)) return;
   const modeBtn=document.getElementById('modeBtn');
   modeBtn.addEventListener('click',()=>{ const html=document.documentElement; const dark=html.getAttribute('data-theme')==='dark'; html.setAttribute('data-theme', dark?'light':'dark'); modeBtn.textContent=dark?'Dark Mode':'Light Mode'; modeBtn.setAttribute('aria-pressed', (!dark).toString()); });
 
-  // Initial render, then load results & re-render actions where applicable
+  // Initial render, then load results & re-render
   renderList(); renderCalendarStack();
   loadResults().then(()=>{ renderList(); renderCalendarStack(); });
   </script>
-   }
 
   <!-- ======= Squarespace iframe auto-resize ======= -->
   <script>
