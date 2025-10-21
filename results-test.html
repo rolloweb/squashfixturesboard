@@ -214,6 +214,13 @@
     const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//PTSRC//Fixtures//EN','BEGIN:VEVENT',`UID:${Date.now()}-${Math.random().toString(36).slice(2)}@ptsquash`,`DTSTAMP:${fmtLocal(new Date())}`,`DTSTART:${fmtLocal(start)}`,`DTEND:${fmtLocal(end)}`,`SUMMARY:PTSRC vs ${ev.opponent} (${ev.home?'Home':'Away'})`,`LOCATION:${ev.location.replace(/,/g,'\\,')}`,'DESCRIPTION:League fixture – check league site for updates.','END:VEVENT','END:VCALENDAR'].join('\r\n');
     return URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));
   }
+    function isAllDivisions(val) {
+  return !val || String(val).trim().toLowerCase().startsWith('all');
+}
+function sameDivision(a, b) {
+  return String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+}
+
 
   /* ---------- results loader from CSV ---------- */
   let RESULT_INDEX = new Map();
@@ -287,6 +294,8 @@
 
   /* ---------- list view ---------- */
   function renderList(){
+    const matchesAll = isAllDivisions(divSel);
+if (!matchesAll && !sameDivision(ev.division, divSel)) return;
     const divSel = document.getElementById('division').value;
     const sportSel = document.getElementById('sport').value;
     const list = document.getElementById('list');
@@ -338,6 +347,8 @@
 
   /* ---------- calendar view ---------- */
   function renderCalendarStack(){
+   const matchesAll = isAllDivisions(divSel);
+if (!matchesAll && !sameDivision(ev.division, divSel)) return;
     const divSel = document.getElementById('division').value;
     const sportSel = document.getElementById('sport').value;
     const wrap = document.getElementById('calendarStack');
@@ -395,6 +406,30 @@
       block.appendChild(title); block.appendChild(calendar);
       wrap.appendChild(block);
     });
+ <script>
+  /* ---------- wiring ---------- */
+  // 1) Force the default to All divisions (must run AFTER the <select> exists)
+  document.getElementById('division').value = 'All divisions';
+
+  // 2) Event listeners
+  document.getElementById('division').addEventListener('change', () => { renderList(); renderCalendarStack(); });
+  document.getElementById('sport').addEventListener('change',   () => { renderList(); renderCalendarStack(); });
+
+  const tabList = document.getElementById('tabList');
+  const tabCal  = document.getElementById('tabCalendar');
+  tabList.addEventListener('click', () => { /* ... */ });
+  tabCal .addEventListener('click', () => { /* ... */ });
+
+  const modeBtn = document.getElementById('modeBtn');
+  modeBtn.addEventListener('click', () => { /* ... */ });
+
+  // 3) Initial render
+  renderList();
+  renderCalendarStack();
+
+  // 4) Load results, then re-render to show “See results” buttons
+  loadResults().then(() => { renderList(); renderCalendarStack(); });
+</script>
   }
 
   /* ---------- results modal ---------- */
