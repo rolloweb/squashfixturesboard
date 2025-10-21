@@ -236,53 +236,74 @@ function findResultFor(ev) {
   return RESULT_INDEX.get(key) || RESULT_INDEX.get(k2) || null;
 }
 
+<script>
+// REPLACE your existing renderList() with this one
+
 function renderList() {
   const divSel = document.getElementById('division').value;
   const sportSel = document.getElementById('sport').value;
   const list = document.getElementById('list');
   list.innerHTML = '';
-  let count=0;
-  DATA.map(r => ({ ...r, dt: parseDate(r.date, r.time), monthKey: null })).forEach(ev => {
-    if(!ev.dt) return;
-    ev.monthKey = monthKey(ev.dt);
-    if(!isAllDivisions(divSel) && ev.division !== divSel) return;
-    if(sportSel && ev.sport !== sportSel) return;
-    const card = document.createElement('div');
-    const divCls = divisionClass(ev.division);
-    card.className = 'card side-stripe ' + divCls;
-    card.style.borderLeftColor = getComputedStyle(document.documentElement).getPropertyValue('--'+divCls);
-    const home = ev.homeAway.toLowerCase() === 'home';
-    const maps = mapsLink(ev.location);
-    const gcal = googleCalLink({ ...ev, home });
-    const ics = makeICS({ ...ev, home });
-    const res = findResultFor(ev);
-    const homePill = `<span class="${home?'home-pill':'away-pill'}">${home?'HOME':'AWAY'}</span>`;
-    const divBadge = `<span class="division-badge ${divCls}">${ev.division}</span>`;
-    const actions = res
-      ? `<a class="btn" href="#" onclick="openResult(${
-            'division': '`+ev.division+`', 
-            'date': '`+ev.date+`', 
-            'time': '`+ev.time+`', 
-            'opponent': '`+ev.opponent.replace("'", "\'")+`'
-          }); return false;">See results</a>`
-      : `<a class="btn" href="${gcal}" target="_blank" rel="noopener">Add to Google</a>
-         <a class="btn secondary" href="${ics}" download="PTSRC_${ev.division.replace(' ','')}_${ev.opponent.replace(/\s+/g,'')}_${ev.monthKey}.ics">Download .ics</a>`;
-    card.innerHTML = `
-      <div class="row-top">
-        <div class="date">${ev.date} • ${ev.time}</div>
-        ${divBadge}
-      </div>
-      <div class="opponent">${homePill}<strong>${ev.opponent}</strong></div>
-      <div class="meta">
-        <a href="${maps}" target="_blank" rel="noopener">${ev.location}</a>
-      </div>
-      <div class="actions">
-        ${actions}
-      </div>`;
-    list.appendChild(card); count++;
-  });
-  document.getElementById('empty').style.display = count ? 'none':'block';
+  let count = 0;
+
+  DATA
+    .map(r => ({ ...r, dt: parseDate(r.date, r.time), monthKey: null }))
+    .forEach(ev => {
+      if (!ev.dt) return;
+      ev.monthKey = monthKey(ev.dt);
+
+      // All-divisions fix (uses helper below)
+      if (!isAllDivisions(divSel) && ev.division !== divSel) return;
+      if (sportSel && ev.sport !== sportSel) return;
+
+      const card = document.createElement('div');
+      const divCls = divisionClass(ev.division);
+      card.className = 'card side-stripe ' + divCls;
+      card.style.borderLeftColor = getComputedStyle(document.documentElement).getPropertyValue('--' + divCls);
+
+      const home = ev.homeAway.toLowerCase() === 'home';
+      const maps = mapsLink(ev.location);
+      const gcal = googleCalLink({ ...ev, home });
+      const ics  = makeICS({ ...ev, home });
+
+      // If a result exists, show “See results” (no broken template strings)
+      const res = findResultFor(ev);
+      let actionsHtml = '';
+      if (res) {
+        const payload = JSON.stringify({
+          division: ev.division,
+          date: ev.date,
+          time: ev.time,
+          opponent: ev.opponent
+        });
+        actionsHtml = `<a class="btn" href="#" onclick='openResult(${payload}); return false;'>See results</a>`;
+      } else {
+        actionsHtml = `
+          <a class="btn" href="${gcal}" target="_blank" rel="noopener">Add to Google</a>
+          <a class="btn secondary" href="${ics}" download="PTSRC_${ev.division.replace(' ','')}_${ev.opponent.replace(/\s+/g,'')}_${ev.monthKey}.ics">Download .ics</a>
+        `;
+      }
+
+      const homePill = `<span class="${home ? 'home-pill' : 'away-pill'}">${home ? 'HOME' : 'AWAY'}</span>`;
+      const divBadge = `<span class="division-badge ${divCls}">${ev.division}</span>`;
+
+      card.innerHTML = `
+        <div class="row-top">
+          <div class="date">${ev.date} • ${ev.time}</div>
+          ${divBadge}
+        </div>
+        <div class="opponent">${homePill}<strong>${ev.opponent}</strong></div>
+        <div class="meta"><a href="${maps}" target="_blank" rel="noopener">${ev.location}</a></div>
+        <div class="actions">${actionsHtml}</div>
+      `;
+
+      list.appendChild(card);
+      count++;
+    });
+
+  document.getElementById('empty').style.display = count ? 'none' : 'block';
 }
+</script>
 
 function renderCalendarStack() {
   const divSel = document.getElementById('division').value;
