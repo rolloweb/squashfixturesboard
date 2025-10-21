@@ -429,8 +429,8 @@ if (!matchesAll && !sameDivision(ev.division, divSel)) return;
 
   // 4) Load results, then re-render to show “See results” buttons
   loadResults().then(() => { renderList(); renderCalendarStack(); });
-</script>
-  }
+ });
+ <script>
 
   /* ---------- results modal ---------- */
   function openResult(ref){
@@ -478,6 +478,7 @@ if (!matchesAll && !sameDivision(ev.division, divSel)) return;
   renderList(); renderCalendarStack();
   loadResults().then(()=>{ renderList(); renderCalendarStack(); });
   </script>
+   }
 
   <!-- ======= Squarespace iframe auto-resize ======= -->
   <script>
