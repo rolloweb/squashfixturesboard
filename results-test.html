@@ -74,6 +74,38 @@
     .res-table{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
     .res-table th,.res-table td{border-bottom:1px solid var(--border);padding:6px 4px;text-align:left}
     .res-head{font-weight:800;margin-top:6px}
+
+    /* --- Modal positioning & page lock --- */
+body.modal-open { overflow: hidden; }
+
+.modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; }
+.modal.show { display: flex; }
+
+.modal .sheet {
+  max-height: 90vh;     /* keep sheet in the viewport */
+  overflow: auto;       /* only the sheet scrolls */
+}
+
+@supports (height: 100dvh) {
+  .modal { height: 100dvh; }
+  .modal .sheet { max-height: 90dvh; }
+}
+/* Center modal in the viewport and keep page from scrolling under it */
+body.modal-open { overflow: hidden; }
+
+.modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; }
+.modal.show { display: flex; }
+
+.modal .sheet {
+  max-height: 90vh;
+  overflow: auto;      /* only the sheet scrolls if content is tall */
+}
+
+@supports (height: 100dvh) {
+  .modal { height: 100dvh; }
+  .modal .sheet { max-height: 90dvh; }
+}
+
   </style>
 </head>
 <body>
@@ -410,52 +442,78 @@
     });
   }
 
-  /* ---------- results modal ---------- */
-  function openResult(ref){
-    const ev = DATA.map(r=>({...r, dt: parseDate(r.date, r.time)}))
-                   .find(x=>x.date===ref.date && x.division===ref.division && x.opponent===ref.opponent);
-    const modal=document.getElementById('modal'); const body=document.getElementById('modalBody');
+/* ---------- results modal ---------- */
+function openResult(ref){
+  const ev = DATA.map(r=>({...r, dt: parseDate(r.date, r.time)}))
+                 .find(x=>x.date===ref.date && x.division===ref.division && x.opponent===ref.opponent);
+  const modal = document.getElementById('modal');
+  const body  = document.getElementById('modalBody');
 
-    if(!ev || !ev.dt){
-      body.innerHTML='<div class="card">No details found.</div>';
-      modal.classList.add('show'); return;
-    }
-    const iso = ev.dt.toISOString().slice(0,10);
-    const k1 = `${ev.division}|${iso}|${ev.location.toLowerCase()}`;
-    const k2 = `${ev.division}|${iso}|${(ev.opponent.split(' ')[0]||'').toLowerCase()}`;
-    const res = RESULT_INDEX.get(k1) || RESULT_INDEX.get(k2);
-
-    if(!res){
-      body.innerHTML = `<div class="card"><div class="res-head">No result found for ${ev.division} – ${ev.date}</div></div>`;
-      modal.classList.add('show'); return;
-    }
-
-    const head = `<div class="row-top"><div class="date">${ev.date} • ${ev.time}</div><span class="division-badge ${divisionClass(ev.division)}">${ev.division}</span></div>`;
-    const rows = (res.rubbers||[]).map(r=>`<tr><td>${r.pboro_player}</td><td>${r.opponent_player}</td><td>${r.score}</td></tr>`).join('');
-    body.innerHTML = `<div class="card">${head}<div class="opponent" style="margin-top:6px"><strong>${ev.opponent}</strong></div><div class="res-head">Result: <strong>${res.team_score}–${res.opp_score}</strong> (PTSRC – ${ev.opponent})</div><table class="res-table"><thead><tr><th>PTSRC</th><th>Opponent</th><th>Score</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  if(!ev || !ev.dt){
+    body.innerHTML = '<div class="card">No details found.</div>';
+    document.body.classList.add('modal-open');          // ← lock page scroll
+    modal.scrollTop = 0;                                 // ← ensure overlay at top
     modal.classList.add('show');
+    return;
   }
+
+  const iso = ev.dt.toISOString().slice(0,10);
+  const k1  = `${ev.division}|${iso}|${ev.location.toLowerCase()}`;
+  const k2  = `${ev.division}|${iso}|${(ev.opponent.split(' ')[0]||'').toLowerCase()}`;
+  const res = RESULT_INDEX.get(k1) || RESULT_INDEX.get(k2);
+
+  if(!res){
+    body.innerHTML = `<div class="card"><div class="res-head">No result found for ${ev.division} – ${ev.date}</div></div>`;
+    document.body.classList.add('modal-open');          // ← lock page scroll
+    modal.scrollTop = 0;                                 // ← ensure overlay at top
+    modal.classList.add('show');
+    return;
+  }
+
+  const head = `<div class="row-top"><div class="date">${ev.date} • ${ev.time}</div><span class="division-badge ${divisionClass(ev.division)}">${ev.division}</span></div>`;
+  const rows = (res.rubbers||[]).map(r=>`<tr><td>${r.pboro_player}</td><td>${r.opponent_player}</td><td>${r.score}</td></tr>`).join('');
+  body.innerHTML = `<div class="card">
+    ${head}
+    <div class="opponent" style="margin-top:6px"><strong>${ev.opponent}</strong></div>
+    <div class="res-head">Result: <strong>${res.team_score}–${res.opp_score}</strong> (PTSRC – ${ev.opponent})</div>
+    <table class="res-table">
+      <thead><tr><th>PTSRC</th><th>Opponent</th><th>Score</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+
+  document.body.classList.add('modal-open');            // ← lock page scroll
+  modal.scrollTop = 0;                                   // ← ensure overlay at top
+  modal.classList.add('show');
+}
 
   /* ---------- wiring ---------- */
   // Force default to "All divisions"
   document.getElementById('division').value = 'All divisions';
 
-  // Listeners
-  document.getElementById('modalClose').addEventListener('click',()=>document.getElementById('modal').classList.remove('show'));
-  document.getElementById('modal').addEventListener('click',(e)=>{ if(e.target.id==='modal') e.currentTarget.classList.remove('show'); });
-  document.addEventListener('keydown',(e)=>{ if(e.key==='Escape') document.getElementById('modal').classList.remove('show'); });
+// Close (X)
+document.getElementById('modalClose').addEventListener('click', () => {
+  document.getElementById('modal').classList.remove('show');
+  document.body.classList.remove('modal-open'); // ← unlock page scroll
+});
 
-  document.getElementById('division').addEventListener('change',()=>{ renderList(); renderCalendarStack(); });
-  document.getElementById('sport').addEventListener('change',()=>{ renderList(); renderCalendarStack(); });
+// Click the dark backdrop
+document.getElementById('modal').addEventListener('click', (e) => {
+  if (e.target.id === 'modal') {
+    e.currentTarget.classList.remove('show');
+    document.body.classList.remove('modal-open'); // ← unlock
+  }
+});
 
-  const tabList=document.getElementById('tabList'), tabCal=document.getElementById('tabCalendar');
-  tabList.addEventListener('click',()=>{ tabList.classList.add('active'); tabCal.classList.remove('active'); document.getElementById('listView').style.display='block'; document.getElementById('calendarView').style.display='none'; });
-  tabCal.addEventListener('click',()=>{ tabCal.classList.add('active'); tabList.classList.remove('active'); document.getElementById('listView').style.display='none'; document.getElementById('calendarView').style.display='block'; });
+// Esc key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.getElementById('modal').classList.remove('show');
+    document.body.classList.remove('modal-open'); // ← unlock
+  }
+});
 
-  const modeBtn=document.getElementById('modeBtn');
-  modeBtn.addEventListener('click',()=>{ const html=document.documentElement; const dark=html.getAttribute('data-theme')==='dark'; html.setAttribute('data-theme', dark?'light':'dark'); modeBtn.textContent=dark?'Dark Mode':'Light Mode'; modeBtn.setAttribute('aria-pressed', (!dark).toString()); });
-
-  // Initial render, then load results & re-render
+    // Initial render, then load results & re-render
   renderList(); renderCalendarStack();
   loadResults().then(()=>{ renderList(); renderCalendarStack(); });
   </script>
