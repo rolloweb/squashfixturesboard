@@ -219,7 +219,7 @@
   let RESULT_INDEX = new Map();
   async function loadResults(){
     try{
-      const csvUrl = 'https://rolloweb.github.io/squashfixturesboard/Squash%20Resultsweb.csv';
+      const csvUrl = 'https://rolloweb.github.io/squashfixturesboard/results.csv';
       const res = await fetch(csvUrl, {cache:'no-store'});
       console.log('Results fetch status:', res.status);
       if (!res.ok) throw new Error('CSV not found');
