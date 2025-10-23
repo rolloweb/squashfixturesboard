@@ -66,7 +66,7 @@
     .chip .dot{width:8px;height:8px;border-radius:50%;flex:0 0 8px}
     .chip .dot.home{background:var(--home)} .chip .dot.away{background:var(--away)}
     .chip.div1{border-color:var(--div1)} .chip.div2{border-color:var(--div2)} .chip.div3{border-color:var(--div3)}
-    /* Modal */
+    /* Modal base styles (plus the positioning/lock below) */
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:100}
     .modal.show{display:flex}
     .modal .sheet{background:var(--card);color:var(--text);border-radius:14px;border:1px solid var(--border);max-width:520px;width:100%;padding:14px}
@@ -76,36 +76,14 @@
     .res-head{font-weight:800;margin-top:6px}
 
     /* --- Modal positioning & page lock --- */
-body.modal-open { overflow: hidden; }
-
-.modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; }
-.modal.show { display: flex; }
-
-.modal .sheet {
-  max-height: 90vh;     /* keep sheet in the viewport */
-  overflow: auto;       /* only the sheet scrolls */
-}
-
-@supports (height: 100dvh) {
-  .modal { height: 100dvh; }
-  .modal .sheet { max-height: 90dvh; }
-}
-/* Center modal in the viewport and keep page from scrolling under it */
-body.modal-open { overflow: hidden; }
-
-.modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; }
-.modal.show { display: flex; }
-
-.modal .sheet {
-  max-height: 90vh;
-  overflow: auto;      /* only the sheet scrolls if content is tall */
-}
-
-@supports (height: 100dvh) {
-  .modal { height: 100dvh; }
-  .modal .sheet { max-height: 90dvh; }
-}
-
+    body.modal-open { overflow: hidden; }
+    .modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; }
+    .modal.show { display: flex; }
+    .modal .sheet { max-height: 90vh; overflow: auto; }
+    @supports (height: 100dvh) {
+      .modal { height: 100dvh; }
+      .modal .sheet { max-height: 90dvh; }
+    }
   </style>
 </head>
 <body>
@@ -253,16 +231,15 @@ body.modal-open { overflow: hidden; }
     try{
       const csvUrl = 'https://rolloweb.github.io/squashfixturesboard/results.csv';
       const res = await fetch(csvUrl, {cache:'no-store'});
-      console.log('Results fetch status:', res.status);
       if (!res.ok) throw new Error('CSV not found');
       const text = await res.text();
 
-      // very simple CSV split (handles unquoted commas poorly; ok for this sheet)
+      // basic CSV split (ok for simple sheets)
       const rows = text.split(/\r?\n/).filter(Boolean).map(r=>r.split(','));
       const headers = rows.shift().map(h=>h.trim());
-      console.log('Results headers:', headers);
       const col = name => headers.findIndex(h => h.toLowerCase() === name.toLowerCase());
 
+      // expected headers (case-insensitive)
       const iTeam   = col('Team');
       const iDate   = col('Fixture date');
       const iLoc    = col('Location');
@@ -270,7 +247,7 @@ body.modal-open { overflow: hidden; }
       const iOppPl  = col('Opponent');
       const iScore  = col('Match Result');
       if ([iTeam,iDate,iLoc,iPB,iOppPl,iScore].some(i=>i<0)){
-        console.warn('Missing expected columns. Found:', headers);
+        console.warn('Results CSV missing expected columns. Found:', headers);
         RESULT_INDEX = new Map(); return;
       }
 
@@ -311,7 +288,6 @@ body.modal-open { overflow: hidden; }
         obj.rubbers.push({pboro_player:pb, opponent_player:oppP, score:sc});
       });
       RESULT_INDEX = map;
-      console.log('Results loaded. Matches indexed:', map.size);
     }catch(err){
       RESULT_INDEX = new Map();
       console.warn('Results not loaded:', err);
@@ -442,78 +418,72 @@ body.modal-open { overflow: hidden; }
     });
   }
 
-/* ---------- results modal ---------- */
-function openResult(ref){
-  const ev = DATA.map(r=>({...r, dt: parseDate(r.date, r.time)}))
-                 .find(x=>x.date===ref.date && x.division===ref.division && x.opponent===ref.opponent);
-  const modal = document.getElementById('modal');
-  const body  = document.getElementById('modalBody');
+  /* ---------- results modal ---------- */
+  function openResult(ref){
+    const ev = DATA.map(r=>({...r, dt: parseDate(r.date, r.time)}))
+                   .find(x=>x.date===ref.date && x.division===ref.division && x.opponent===ref.opponent);
+    const modal=document.getElementById('modal'); const body=document.getElementById('modalBody');
 
-  if(!ev || !ev.dt){
-    body.innerHTML = '<div class="card">No details found.</div>';
-    document.body.classList.add('modal-open');          // ← lock page scroll
-    modal.scrollTop = 0;                                 // ← ensure overlay at top
+    if(!ev || !ev.dt){
+      body.innerHTML='<div class="card">No details found.</div>';
+      document.body.classList.add('modal-open');
+      modal.scrollTop = 0;
+      modal.classList.add('show');
+      return;
+    }
+    const iso = ev.dt.toISOString().slice(0,10);
+    const k1 = `${ev.division}|${iso}|${ev.location.toLowerCase()}`;
+    const k2 = `${ev.division}|${iso}|${(ev.opponent.split(' ')[0]||'').toLowerCase()}`;
+    const res = RESULT_INDEX.get(k1) || RESULT_INDEX.get(k2);
+
+    if(!res){
+      body.innerHTML = `<div class="card"><div class="res-head">No result found for ${ev.division} – ${ev.date}</div></div>`;
+      document.body.classList.add('modal-open');
+      modal.scrollTop = 0;
+      modal.classList.add('show');
+      return;
+    }
+
+    const head = `<div class="row-top"><div class="date">${ev.date} • ${ev.time}</div><span class="division-badge ${divisionClass(ev.division)}">${ev.division}</span></div>`;
+    const rows = (res.rubbers||[]).map(r=>`<tr><td>${r.pboro_player}</td><td>${r.opponent_player}</td><td>${r.score}</td></tr>`).join('');
+    body.innerHTML = `<div class="card">
+      ${head}
+      <div class="opponent" style="margin-top:6px"><strong>${ev.opponent}</strong></div>
+      <div class="res-head">Result: <strong>${res.team_score}–${res.opp_score}</strong> (PTSRC – ${ev.opponent})</div>
+      <table class="res-table">
+        <thead><tr><th>PTSRC</th><th>Opponent</th><th>Score</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+
+    document.body.classList.add('modal-open');
+    modal.scrollTop = 0;
     modal.classList.add('show');
-    return;
   }
-
-  const iso = ev.dt.toISOString().slice(0,10);
-  const k1  = `${ev.division}|${iso}|${ev.location.toLowerCase()}`;
-  const k2  = `${ev.division}|${iso}|${(ev.opponent.split(' ')[0]||'').toLowerCase()}`;
-  const res = RESULT_INDEX.get(k1) || RESULT_INDEX.get(k2);
-
-  if(!res){
-    body.innerHTML = `<div class="card"><div class="res-head">No result found for ${ev.division} – ${ev.date}</div></div>`;
-    document.body.classList.add('modal-open');          // ← lock page scroll
-    modal.scrollTop = 0;                                 // ← ensure overlay at top
-    modal.classList.add('show');
-    return;
-  }
-
-  const head = `<div class="row-top"><div class="date">${ev.date} • ${ev.time}</div><span class="division-badge ${divisionClass(ev.division)}">${ev.division}</span></div>`;
-  const rows = (res.rubbers||[]).map(r=>`<tr><td>${r.pboro_player}</td><td>${r.opponent_player}</td><td>${r.score}</td></tr>`).join('');
-  body.innerHTML = `<div class="card">
-    ${head}
-    <div class="opponent" style="margin-top:6px"><strong>${ev.opponent}</strong></div>
-    <div class="res-head">Result: <strong>${res.team_score}–${res.opp_score}</strong> (PTSRC – ${ev.opponent})</div>
-    <table class="res-table">
-      <thead><tr><th>PTSRC</th><th>Opponent</th><th>Score</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-  </div>`;
-
-  document.body.classList.add('modal-open');            // ← lock page scroll
-  modal.scrollTop = 0;                                   // ← ensure overlay at top
-  modal.classList.add('show');
-}
 
   /* ---------- wiring ---------- */
-  // Force default to "All divisions"
+  // Default to "All divisions"
   document.getElementById('division').value = 'All divisions';
 
-// Close (X)
-document.getElementById('modalClose').addEventListener('click', () => {
-  document.getElementById('modal').classList.remove('show');
-  document.body.classList.remove('modal-open'); // ← unlock page scroll
-});
+  // Close handlers (unlock page scroll)
+  document.getElementById('modalClose').addEventListener('click',()=>{ document.getElementById('modal').classList.remove('show'); document.body.classList.remove('modal-open'); });
+  document.getElementById('modal').addEventListener('click',(e)=>{ if(e.target.id==='modal'){ e.currentTarget.classList.remove('show'); document.body.classList.remove('modal-open'); }});
+  document.addEventListener('keydown',(e)=>{ if(e.key==='Escape'){ document.getElementById('modal').classList.remove('show'); document.body.classList.remove('modal-open'); }});
 
-// Click the dark backdrop
-document.getElementById('modal').addEventListener('click', (e) => {
-  if (e.target.id === 'modal') {
-    e.currentTarget.classList.remove('show');
-    document.body.classList.remove('modal-open'); // ← unlock
-  }
-});
+  // Filters
+  document.getElementById('division').addEventListener('change',()=>{ renderList(); renderCalendarStack(); });
+  document.getElementById('sport').addEventListener('change',()=>{ renderList(); renderCalendarStack(); });
 
-// Esc key
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    document.getElementById('modal').classList.remove('show');
-    document.body.classList.remove('modal-open'); // ← unlock
-  }
-});
+  // Tabs
+  const tabList=document.getElementById('tabList'), tabCal=document.getElementById('tabCalendar');
+  tabList.addEventListener('click',()=>{ tabList.classList.add('active'); tabCal.classList.remove('active'); document.getElementById('listView').style.display='block'; document.getElementById('calendarView').style.display='none'; });
+  tabCal.addEventListener('click',()=>{ tabCal.classList.add('active'); tabList.classList.remove('active'); document.getElementById('listView').style.display='none'; document.getElementById('calendarView').style.display='block'; });
 
-    // Initial render, then load results & re-render
+  // Mode toggle
+  const modeBtn=document.getElementById('modeBtn');
+  modeBtn.addEventListener('click',()=>{ const html=document.documentElement; const dark=html.getAttribute('data-theme')==='dark'; html.setAttribute('data-theme', dark?'light':'dark'); modeBtn.textContent=dark?'Dark Mode':'Light Mode'; modeBtn.setAttribute('aria-pressed', (!dark).toString()); });
+
+  // Initial render, then load results & re-render
   renderList(); renderCalendarStack();
   loadResults().then(()=>{ renderList(); renderCalendarStack(); });
   </script>
